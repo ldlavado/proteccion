@@ -123,7 +123,7 @@ public class FibonacciServiceImpl implements FibonacciService {
     }
 
     private void sendFibonacciEmail(String time, int seedX, int seedY, List<Integer> sequence) {
-        String subject = "Technical Test – Your Full Name";
+        String subject = "Prueba Técnica – Luis Daniel Lavado Carreño";
         String body = "Execution time: " + time + "\n"
                 + "Seeds: [" + seedX + ", " + seedY + "]\n"
                 + "Generated sequence: " + sequence;
