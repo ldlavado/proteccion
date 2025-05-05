@@ -1,18 +1,9 @@
 package com.ldlavado.proteccion.entity;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-import jakarta.persistence.Table;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import jakarta.persistence.*;
+import lombok.*;
 
-import java.time.LocalTime;
+import java.time.OffsetTime;
 
 @Entity
 @Table(name = "fibonacci")
@@ -27,7 +18,8 @@ public class Fibonacci {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long fibonacciId;
 
-    private LocalTime date;
+    @Column(nullable = false, unique = true)
+    private OffsetTime time;
 
     private String beans;
 
@@ -35,5 +27,4 @@ public class Fibonacci {
 
     @Column(length = 1000)
     private String fibonacciCreated;
-
 }

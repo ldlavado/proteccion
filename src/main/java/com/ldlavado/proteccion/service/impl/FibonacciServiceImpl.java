@@ -10,7 +10,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import java.time.LocalTime;
+import java.time.*;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -29,26 +29,26 @@ public class FibonacciServiceImpl implements FibonacciService {
     public FibonacciResponseDTO generateSeriesFromTime(String time) {
         log.info("Generating Fibonacci series from time: {}", time);
 
-        LocalTime localTime = parseTime(time);
-        int minutes = localTime.getMinute();
-        int seconds = localTime.getSecond();
+        OffsetTime offsetTime = parseToOffsetTime(time);
+        int minutes = offsetTime.getHour() * 60 + offsetTime.getMinute();
+        int seconds = offsetTime.getSecond();
+
+        if (fibonacciRepository.existsByTime(offsetTime)) {
+            log.warn("Fibonacci series already exists for time: {}", offsetTime);
+            throw new FibonacciBusinessException("A Fibonacci series for this time already exists.");
+        }
 
         int seedX = minutes / 10;
         int seedY = minutes % 10;
-
-        log.debug("Extracted seeds: seedX={}, seedY={}", seedX, seedY);
 
         validateSeeds(seedX, seedY);
         int length = seconds + 2;
         validateLength(length);
 
-        log.debug("Generating sequence with length: {}", length);
         List<Integer> sequence = generateFibonacciSequence(seedX, seedY, length);
         List<Integer> result = excludeSeedsAndSort(sequence);
 
-        log.info("Generated sequence: {}", result);
-
-        saveFibonacciRecord(localTime, minutes, seconds, result);
+        saveFibonacciRecord(offsetTime, minutes, seconds, result);
         sendFibonacciEmail(time, seedX, seedY, result);
 
         return buildResponse(time, seedX, seedY, result);
@@ -66,16 +66,18 @@ public class FibonacciServiceImpl implements FibonacciService {
 
         return records.stream()
                 .map(record -> FibonacciResponseDTO.builder()
-                        .time(record.getDate().toString())
+                        .time(record.getTime().toString())
                         .seeds(extractSeedsFromBeans(record.getBeans()))
                         .sequence(parseSequenceFromString(record.getFibonacciCreated()))
                         .build())
                 .collect(Collectors.toList());
     }
 
-    private LocalTime parseTime(String time) {
+    private OffsetTime parseToOffsetTime(String time) {
         try {
-            return LocalTime.parse(time, DateTimeFormatter.ofPattern("HH:mm:ss"));
+            LocalTime localTime = LocalTime.parse(time, DateTimeFormatter.ofPattern("HH:mm:ss"));
+            ZoneOffset offset = ZoneId.systemDefault().getRules().getOffset(Instant.now());
+            return OffsetTime.of(localTime, offset);
         } catch (Exception e) {
             log.error("Failed to parse time: {}", time, e);
             throw new FibonacciBusinessException("Invalid time format. Expected HH:mm:ss");
@@ -111,9 +113,9 @@ public class FibonacciServiceImpl implements FibonacciService {
                 .collect(Collectors.toList());
     }
 
-    private void saveFibonacciRecord(LocalTime time, int minutes, int seconds, List<Integer> sequence) {
+    private void saveFibonacciRecord(OffsetTime time, int minutes, int seconds, List<Integer> sequence) {
         Fibonacci entity = Fibonacci.builder()
-                .date(time)
+                .time(time)
                 .beans(String.valueOf(minutes))
                 .length(seconds)
                 .fibonacciCreated(sequence.toString())
